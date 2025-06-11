@@ -1,3 +1,15 @@
+// Abilita CORS
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
+// Risposta immediata alle richieste preflight
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+  http_response_code(204);
+  exit;
+}
+
+
 <?php
 $dir = "liste";
 if (!file_exists($dir)) mkdir($dir, 0755, true);
