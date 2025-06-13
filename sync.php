@@ -10,7 +10,25 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   exit;
 }
 
-// === Percorso file dati ===
+// === Connessione al database ===
+$db_host = getenv("DB_HOST");     // Es: db.abcd.supabase.co
+$db_port = getenv("DB_PORT") ?: "5432";
+$db_name = getenv("DB_NAME");
+$db_user = getenv("DB_USER");
+$db_pass = getenv("DB_PASS");
+
+$dsn = "pgsql:host=$db_host;port=$db_port;dbname=$db_name";
+try {
+  $pdo = new PDO($dsn, $db_user, $db_pass, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+  ]);
+} catch (Exception $e) {
+  http_response_code(500);
+  echo "Errore di connessione al database";
+  exit;
+}
+
+// === Gestione codice lista ===
 $code = $_GET["code"] ?? "";
 if (!$code) {
   http_response_code(400);
@@ -18,21 +36,30 @@ if (!$code) {
   exit;
 }
 
-$filename = "liste/" . preg_replace("/[^A-Z0-9]/", "", strtoupper($code)) . ".json";
-
-// === Se è POST, salva la lista ===
+// === Se è POST: salva o aggiorna la lista ===
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $data = file_get_contents("php://input");
-  if (!is_dir("liste")) mkdir("liste");
-  file_put_contents($filename, $data);
+
+  $stmt = $pdo->prepare("INSERT INTO liste (code, contenuto, updated)
+                         VALUES (:code, :contenuto, now())
+                         ON CONFLICT (code)
+                         DO UPDATE SET contenuto = EXCLUDED.contenuto, updated = now()");
+  $stmt->execute([
+    ":code" => strtoupper($code),
+    ":contenuto" => $data
+  ]);
   echo "✅ Lista salvata";
   exit;
 }
 
-// === Se è GET, restituisci la lista ===
-if (file_exists($filename)) {
+// === Se è GET: restituisci la lista ===
+$stmt = $pdo->prepare("SELECT contenuto FROM liste WHERE code = :code");
+$stmt->execute([":code" => strtoupper($code)]);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($row) {
   header("Content-Type: application/json");
-  readfile($filename);
+  echo $row["contenuto"];
 } else {
   echo "[]";
 }
