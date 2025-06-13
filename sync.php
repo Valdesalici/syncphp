@@ -1,11 +1,16 @@
 <?php
-// CONFIGURAZIONE
-$dbHost = 'db.eujfqsvclsffwccojpdv.supabase.co';
-$dbName = 'postgres';
-$dbUser = 'postgres';
-$dbPass = 'tpOMv6VTaRQ7hpo7'; // ← cambia qui con la password che hai scelto su Supabase
+require_once __DIR__ . '/vendor/autoload.php';
 
-// CONNESSIONE
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$dbHost = $_ENV['DB_HOST'] ?? '';
+$dbName = $_ENV['DB_NAME'] ?? '';
+$dbUser = $_ENV['DB_USER'] ?? '';
+$dbPass = $_ENV['DB_PASS'] ?? '';
+
 try {
     $pdo = new PDO("pgsql:host=$dbHost;port=5432;dbname=$dbName", $dbUser, $dbPass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
@@ -16,7 +21,6 @@ try {
     exit;
 }
 
-// AZIONI
 $action = $_GET['action'] ?? '';
 $code = $_GET['code'] ?? '';
 header('Content-Type: application/json');
@@ -56,5 +60,4 @@ if ($action === 'save') {
     exit;
 }
 
-// Default
 echo json_encode(['error' => 'Invalid action']);
